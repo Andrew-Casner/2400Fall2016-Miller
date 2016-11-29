@@ -164,7 +164,6 @@ void eval(char *cmdline)
   int bg = parseline(cmdline, argv); 
   if (argv[0] == NULL)  
     return;   /* ignore empty lines */
-
   return;
 }
 
@@ -179,7 +178,12 @@ void eval(char *cmdline)
 //
 int builtin_cmd(char **argv) 
 {
-  string cmd(argv[0]);
+  // All the built in commands go here
+  if(strcmp(argv[0],"quit") == 0){
+    exit(0);
+  }
+  else if(strcmp(argv[0],""
+
   return 0;     /* not a builtin command */
 }
 

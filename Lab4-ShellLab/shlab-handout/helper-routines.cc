@@ -76,7 +76,7 @@ void sigquit_handler(int sig)
  */
 int parseline(const char *cmdline, char **argv) 
 {
-    char array[MAXLINE]; /* holds local copy of command line */
+    static char array[MAXLINE]; /* holds local copy of command line */
     char *buf = array;          /* ptr that traverses command line */
     char *delim;                /* points to first space delimiter */
     int argc;                   /* number of args */
