@@ -148,23 +148,45 @@ int main(int argc, char **argv)
 //
 void eval(char *cmdline) 
 {
-  /* Parse command line */
-  //
-  // The 'argv' vector is filled in by the parseline
-  // routine below. It provides the arguments needed
-  // for the execve() routine, which you'll need to
-  // use below to launch a process.
-  //
-  char *argv[MAXARGS];
-
-  //
-  // The 'bg' variable is TRUE if the job should run
-  // in background mode or FALSE if it should run in FG
-  //
-  int bg = parseline(cmdline, argv); 
-  if (argv[0] == NULL)  
-    return;   /* ignore empty lines */
-  return;
+	/* Parse command line */
+	//
+	// The 'argv' vector is filled in by the parseline
+	// routine below. It provides the arguments needed
+	// for the execve() routine, which you'll need to
+	// use below to launch a process.
+	char *argv[MAXARGS];
+	// The 'bg' variable is TRUE if the job should run
+	// in background mode or FALSE if it should run in FG
+	int bg = parseline(cmdline, argv); 
+	// New process id 
+	pid_t pid;
+	//No return if the argument is NULL 
+	if(argv[0] == NULL) return; 
+	// Filter out all commands that are not built in
+	if (builtin_cmd(argv) == 0){
+		pid = fork();
+		if(pid < 0){
+			printf("Fork Failed");
+			exit(0);
+		}
+		if(pid == 0){
+			//fork worked
+			setpgid(0,0);
+			execv(argv[0], argv);
+			//coud not execute the command
+			printf("%s: Command not found\n", argv[0]);
+			exit(0);
+		}
+		if(bg){
+			addjob(jobs, pid, BG, cmdline);
+			int jid = pid2jid(pid);
+			printf("[%d] (%d) %s",jid,pid,cmdline);
+		}
+		else{
+			addjob(jobs, pid, FG, cmdline);
+		}
+	}
+	return;
 }
 
 
@@ -180,10 +202,23 @@ int builtin_cmd(char **argv)
 {
   // All the built in commands go here
   if(strcmp(argv[0],"quit") == 0){
+    //TODO close all fo the jobs currently running
     exit(0);
+    return 1;
   }
-  else if(strcmp(argv[0],""
-
+  else if(strcmp(argv[0],"jobs") == 0){
+    // print all of the jobs
+    listjobs(jobs);
+    return 1;
+  }
+  else if(strcmp(argv[0],"fg") == 0){
+    do_bgfg(argv);
+    return 1;
+  }
+  else if(strcmp(argv[0],"bg") == 0){
+    do_bgfg(argv);
+    return 1;
+  }
   return 0;     /* not a builtin command */
 }
 
@@ -241,7 +276,10 @@ void do_bgfg(char **argv)
 //
 void waitfg(pid_t pid)
 {
-  return;
+	while(pid == fgpid(jobs)){
+		sleep(1);
+	}	
+	return;
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -271,7 +309,21 @@ void sigchld_handler(int sig)
 //
 void sigint_handler(int sig) 
 {
-  return;
+	int pid = fgpid(jobs);
+	int jid = pid2jid(pid);	
+	if(pid == 0){
+		//There is no foreground Process	
+		return;
+	}
+	else{
+		//There is a foreground Process	
+	        printf("Job [%d] (%d) terminated by signal %d\n",jid, pid, sig);
+		//Reap it
+		kill(-pid, SIGINT);
+		//Remove the job from the joblist
+		deletejob(jobs,pid);
+	} 
+	return;
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -282,13 +334,23 @@ void sigint_handler(int sig)
 //
 void sigtstp_handler(int sig) 
 {
-  return;
+	int pid = fgpid(jobs);
+	int jid = pid2jid(pid);	
+	if(pid == 0){
+		//There is no foreground Process	
+		return;
+	}
+	else{
+		//There is a foreground Process	
+		printf("Job [%d] (%d) Stopped by signal %d\n",jid, pid, sig);
+		//Set the state to stopped
+		getjobpid(jobs,pid)->state=ST;
+		//Stop it
+		kill(-pid, SIGTSTP);
+	} 
+	return;
 }
 
 /*********************
  * End signal handlers
  *********************/
-
-
-
-
