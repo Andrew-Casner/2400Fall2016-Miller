@@ -1,6 +1,7 @@
 // 
 // tsh - A tiny shell program with job control
 // 
+//Nicholas Erokhin 104189096
 // Andrew Casner 104261003 
 //
 
@@ -158,6 +159,7 @@ void eval(char *cmdline)
 	// The 'bg' variable is TRUE if the job should run
 	// in background mode or FALSE if it should run in FG
 	int bg = parseline(cmdline, argv); 
+  struct job_t *job;
 	// New process id 
 	pid_t pid;
 	//No return if the argument is NULL 
@@ -177,14 +179,23 @@ void eval(char *cmdline)
 			printf("%s: Command not found\n", argv[0]);
 			exit(0);
 		}
-		if(bg){
-			addjob(jobs, pid, BG, cmdline);
-			int jid = pid2jid(pid);
-			printf("[%d] (%d) %s",jid,pid,cmdline);
-		}
-		else{
-			addjob(jobs, pid, FG, cmdline);
-			waitfg(pid);
+
+
+if (bg){
+
+  addjob(jobs, pid, BG, cmdline);
+  job = getjobpid(jobs, pid);
+  printf("[%d] (%d) %s\n", job->jid, job->pid, cmdline);
+
+
+}
+
+else{
+  //addjob(jobs, pid, FG, cmdline);
+  //job = getjobpid(jobs, pid);
+  addjob(jobs, pid, FG, cmdline);
+  waitfg(pid);
+			
 		}
 	}
 	return;
@@ -277,9 +288,12 @@ void do_bgfg(char **argv)
 //
 void waitfg(pid_t pid)
 {
-	while(pid == fgpid(jobs)){
-		sleep(1);
-	}	
+  struct job_t *job;
+  job = getjobpid(jobs, pid);
+	if(job->state == FG){
+    sleep(1);
+  }
+	
 	return;
 }
 
@@ -299,6 +313,15 @@ void waitfg(pid_t pid)
 //
 void sigchld_handler(int sig) 
 {
+  pid_t pid;
+  int status;
+  while((pid = waitpid(-1, &status, WNOHANG)) > 0){
+    deletejob(jobs, pid);
+  }
+  if(pid<0 && errno != ECHILD){
+    printf("pid error: %s\n", strerror(errno));
+  }
+
   return;
 }
 
