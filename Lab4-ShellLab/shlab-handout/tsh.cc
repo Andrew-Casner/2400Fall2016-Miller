@@ -184,7 +184,7 @@ void eval(char *cmdline)
 
 			addjob(jobs, pid, BG, cmdline);
 			job = getjobpid(jobs, pid);
-			printf("[%d] (%d) %s\n", job->jid, job->pid, cmdline);
+			printf("[%d] (%d) %s", job->jid, job->pid, cmdline);
 
 
 		}
@@ -309,16 +309,16 @@ void waitfg(pid_t pid)
 //
 void sigchld_handler(int sig) 
 {
-  pid_t pid;
-  int status;
-  while((pid = waitpid(-1, &status, WNOHANG)) > 0){
-    deletejob(jobs, pid);
-  }
-  if(pid<0 && errno != ECHILD){
-    printf("pid error: %s\n", strerror(errno));
-  }
+	pid_t pid;
+	int status;
+	while((pid = waitpid(-1, &status, WNOHANG)) > 0){
+		deletejob(jobs, pid);
+	}
+	if(pid<0 && errno != ECHILD){
+		printf("pid error: %s\n", strerror(errno));
+	}
 
-  return;
+	return;
 }
 
 /////////////////////////////////////////////////////////////////////////////
