@@ -159,7 +159,7 @@ void eval(char *cmdline)
 	// The 'bg' variable is TRUE if the job should run
 	// in background mode or FALSE if it should run in FG
 	int bg = parseline(cmdline, argv); 
-  struct job_t *job;
+	struct job_t *job;
 	// New process id 
 	pid_t pid;
 	//No return if the argument is NULL 
@@ -180,26 +180,25 @@ void eval(char *cmdline)
 			exit(0);
 		}
 
+		if (bg){
 
-if (bg){
-
-  addjob(jobs, pid, BG, cmdline);
-  job = getjobpid(jobs, pid);
-  printf("[%d] (%d) %s\n", job->jid, job->pid, cmdline);
+			addjob(jobs, pid, BG, cmdline);
+			job = getjobpid(jobs, pid);
+			printf("[%d] (%d) %s\n", job->jid, job->pid, cmdline);
 
 
-}
+		}
 
-else{
-  //addjob(jobs, pid, FG, cmdline);
-  //job = getjobpid(jobs, pid);
-  addjob(jobs, pid, FG, cmdline);
-  waitfg(pid);
-			
+		else{
+			//addjob(jobs, pid, FG, cmdline);
+			//job = getjobpid(jobs, pid);
+			addjob(jobs, pid, FG, cmdline);
+			waitfg(pid);
+					
 		}
 	}
 	return;
-}
+	}
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -288,12 +287,9 @@ void do_bgfg(char **argv)
 //
 void waitfg(pid_t pid)
 {
-  struct job_t *job;
-  job = getjobpid(jobs, pid);
-	if(job->state == FG){
-    sleep(1);
-  }
-	
+	while(pid == fgpid(jobs)){
+		sleep(1);	
+	}
 	return;
 }
 
