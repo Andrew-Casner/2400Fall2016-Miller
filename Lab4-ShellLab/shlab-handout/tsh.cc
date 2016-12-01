@@ -279,10 +279,7 @@ void do_bgfg(char **argv)
 	string cmd(argv[0]);
 
 	if(cmd == "fg"){
-		//If the job is not running and is stopped, continue it
-		if(jobp->state == ST){
-			kill(-jobp->pid,SIGCONT);
-		}
+		kill(-jobp->pid,SIGCONT);
 		jobp->state = FG;
 		waitfg(jobp->pid);
 	}
