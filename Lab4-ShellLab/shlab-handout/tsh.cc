@@ -160,18 +160,24 @@ void eval(char *cmdline)
 	// in background mode or FALSE if it should run in FG
 	int bg = parseline(cmdline, argv); 
 	struct job_t *job;
+	sigset_t mask;
+	
+	sigemptyset(&mask);
+	sigaddset(&mask, SIGCHLD);
 	// New process id 
 	pid_t pid;
 	//No return if the argument is NULL 
 	if(argv[0] == NULL) return; 
 	// Filter out all commands that are not built in
 	if (builtin_cmd(argv) == 0){
+		sigprocmask(SIG_BLOCK, &mask, 0);
 		pid = fork();
 		if(pid < 0){
 			printf("Fork Failed");
 			exit(0);
 		}
 		if(pid == 0){
+			sigprocmask(SIG_UNBLOCK, &mask, NULL);
 			//fork worked
 			setpgid(0,0);
 			execv(argv[0], argv);
@@ -183,6 +189,7 @@ void eval(char *cmdline)
 		if (bg){
 
 			addjob(jobs, pid, BG, cmdline);
+			sigprocmask(SIG_UNBLOCK, &mask, NULL);
 			job = getjobpid(jobs, pid);
 			printf("[%d] (%d) %s", job->jid, job->pid, cmdline);
 
@@ -193,6 +200,7 @@ void eval(char *cmdline)
 			//addjob(jobs, pid, FG, cmdline);
 			//job = getjobpid(jobs, pid);
 			addjob(jobs, pid, FG, cmdline);
+			sigprocmask(SIG_UNBLOCK, &mask, NULL);
 			waitfg(pid);
 					
 		}
