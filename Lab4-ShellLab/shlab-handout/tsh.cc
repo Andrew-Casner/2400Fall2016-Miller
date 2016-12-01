@@ -278,6 +278,18 @@ void do_bgfg(char **argv)
   //
   string cmd(argv[0]);
 
+  if(cmd == "fg"){
+    jobp->state = FG;
+    waitfg(jobp->pid);
+  }
+
+  if(cmd == "bg"){
+    jobp->state = BG;
+    printf("[%d] (%d) %s", jobp->jid, jobp->pid, jobp->cmdline);
+  }
+
+
+
   return;
 }
 
