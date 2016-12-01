@@ -276,21 +276,25 @@ void do_bgfg(char **argv)
   // so we've converted argv[0] to a string (cmd) for
   // your benefit.
   //
-  string cmd(argv[0]);
+	string cmd(argv[0]);
 
-  if(cmd == "fg"){
-    jobp->state = FG;
-    waitfg(jobp->pid);
-  }
+	if(cmd == "fg"){
+		//If the job is not running and is stopped, continue it
+		if(jobp->state == ST){
+			kill(-jobp->pid,SIGCONT);
+		}
+		jobp->state = FG;
+		waitfg(jobp->pid);
+	}
 
-  if(cmd == "bg"){
-    jobp->state = BG;
-    printf("[%d] (%d) %s", jobp->jid, jobp->pid, jobp->cmdline);
-  }
+	if(cmd == "bg"){
+		jobp->state = BG;
+		printf("[%d] (%d) %s", jobp->jid, jobp->pid, jobp->cmdline);
+	}
 
 
 
-  return;
+	return;
 }
 
 /////////////////////////////////////////////////////////////////////////////
