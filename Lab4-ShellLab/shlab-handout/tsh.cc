@@ -383,7 +383,7 @@ void sigtstp_handler(int sig)
 	}
 	else{
 		//There is a foreground Process	
-		printf("Job [%d] (%d) Stopped by signal %d\n",jid, pid, sig);
+		printf("Job [%d] (%d) stopped by signal %d\n",jid, pid, sig);
 		//Set the state to stopped
 		getjobpid(jobs,pid)->state=ST;
 		//Stop it
