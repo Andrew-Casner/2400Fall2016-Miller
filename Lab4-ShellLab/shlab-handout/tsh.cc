@@ -160,10 +160,11 @@ void eval(char *cmdline)
 	// in background mode or FALSE if it should run in FG
 	int bg = parseline(cmdline, argv); 
 	struct job_t *job;
+	// This initializes the signal set
 	sigset_t mask;
-	
 	sigemptyset(&mask);
 	sigaddset(&mask, SIGCHLD);
+
 	// New process id 
 	pid_t pid;
 	//No return if the argument is NULL 
@@ -171,12 +172,14 @@ void eval(char *cmdline)
 	// Filter out all commands that are not built in
 	if (builtin_cmd(argv) == 0){
 		sigprocmask(SIG_BLOCK, &mask, 0);
+		//  Temporarily blocks SIGCHLD before we fork, blocks parent from child
 		pid = fork();
 		if(pid < 0){
 			printf("Fork Failed");
 			exit(0);
 		}
 		if(pid == 0){
+			// Unblocks child after forking and before execv
 			sigprocmask(SIG_UNBLOCK, &mask, NULL);
 			//fork worked
 			setpgid(0,0);
@@ -185,22 +188,25 @@ void eval(char *cmdline)
 			printf("%s: Command not found\n", argv[0]);
 			exit(0);
 		}
-
+		// If the process has a "&" flag, it is set to run in the background
 		if (bg){
 
 			addjob(jobs, pid, BG, cmdline);
 			sigprocmask(SIG_UNBLOCK, &mask, NULL);
+			//Unblock after addjob 
 			job = getjobpid(jobs, pid);
 			printf("[%d] (%d) %s", job->jid, job->pid, cmdline);
 
 
 		}
-
+		// The frocess is a foreground process
 		else{
 			//addjob(jobs, pid, FG, cmdline);
 			//job = getjobpid(jobs, pid);
 			addjob(jobs, pid, FG, cmdline);
 			sigprocmask(SIG_UNBLOCK, &mask, NULL);
+			//Unblock after addjob 
+		 	//Wait for the foreground process to compleate before going on	
 			waitfg(pid);
 					
 		}
@@ -221,7 +227,6 @@ int builtin_cmd(char **argv)
 {
   // All the built in commands go here
   if(strcmp(argv[0],"quit") == 0){
-    //TODO close all fo the jobs currently running
     exit(0);
     return 1;
   }
@@ -285,19 +290,22 @@ void do_bgfg(char **argv)
   // your benefit.
   //
 	string cmd(argv[0]);
-
+	//If the command to bring the process to the foreground then
+	//restart the process
+	//set the state to "FG"
+	//wait for the process to finish before going on
 	if(cmd == "fg"){
 		kill(-jobp->pid,SIGCONT);
 		jobp->state = FG;
 		waitfg(jobp->pid);
 	}
-
+	//If the command to movce the process to the background then
+	//set the state to "BG"
+	//print out background process
 	if(cmd == "bg"){
 		jobp->state = BG;
 		printf("[%d] (%d) %s", jobp->jid, jobp->pid, jobp->cmdline);
 	}
-
-
 
 	return;
 }
@@ -331,9 +339,20 @@ void waitfg(pid_t pid)
 void sigchld_handler(int sig) 
 {
 	pid_t pid;
+	int jid = pid2jid(pid);	
 	int status;
-	while((pid = waitpid(-1, &status, WNOHANG)) > 0){
-		deletejob(jobs, pid);
+	while((pid = waitpid(-1, &status, WNOHANG|WUNTRACED)) > 0){
+		if(WIFEXITED(status)){
+			deletejob(jobs, pid);
+		}
+		if(WIFSIGNALED(status)){
+			printf("Job [%d] (%d) terminated by signal %d\n",jid, pid, sig);
+			deletejob(jobs, pid);
+		}
+		if(WIFSTOPPED(status)){
+			printf("Job [%d] (%d) stopped by signal %d\n",jid, pid, sig);
+		}
+
 	}
 	if(pid<0 && errno != ECHILD){
 		printf("pid error: %s\n", strerror(errno));
