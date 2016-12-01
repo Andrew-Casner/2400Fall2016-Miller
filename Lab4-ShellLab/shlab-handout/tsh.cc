@@ -1,7 +1,7 @@
 // 
 // tsh - A tiny shell program with job control
 // 
-//Nicholas Erokhin 104189096
+// Nicholas Erokhin 104189096
 // Andrew Casner 104261003 
 //
 
