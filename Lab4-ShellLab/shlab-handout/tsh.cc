@@ -184,6 +184,7 @@ void eval(char *cmdline)
 		}
 		else{
 			addjob(jobs, pid, FG, cmdline);
+			waitfg(pid);
 		}
 	}
 	return;
