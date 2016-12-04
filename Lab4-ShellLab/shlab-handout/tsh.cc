@@ -199,9 +199,8 @@ void eval(char *cmdline)
 
 
 		}
-		// The frocess is a foreground process
+		// The process is a foreground process
 		else{
-			//addjob(jobs, pid, FG, cmdline);
 			//job = getjobpid(jobs, pid);
 			addjob(jobs, pid, FG, cmdline); //Adds job with foreground flag
 			sigprocmask(SIG_UNBLOCK, &mask, NULL);
@@ -236,11 +235,11 @@ int builtin_cmd(char **argv)
     return 1;
   }
   else if(strcmp(argv[0],"fg") == 0){
-    do_bgfg(argv);
+    do_bgfg(argv); //Calls fg/bg handler
     return 1;
   }
   else if(strcmp(argv[0],"bg") == 0){
-    do_bgfg(argv);
+    do_bgfg(argv); //Calles fg/bg handler
     return 1;
   }
   return 0;     /* not a builtin command */
@@ -317,7 +316,7 @@ void do_bgfg(char **argv)
 void waitfg(pid_t pid)
 {
 	while(pid == fgpid(jobs)){
-		sleep(1);
+		sleep(1); //sleeps while current job isnt running or foreground
 	}
 	return;
 }
@@ -341,9 +340,15 @@ void sigchld_handler(int sig)
 	pid_t pid;
 	//int jid = pid2jid(pid);
 	int status;
-	while((pid = waitpid(-1, &status, WNOHANG|WUNTRACED)) > 0){ //Wait for the child whos process ID is pid
+
+	/*
+	" WNOHANG|WUNTRACED - Return immediately with value 0 if none of the child processes in the wait set have terminated.
+	OR wait until process in wait set has terminated or stopped, then return pid of stopped/termed process that caused WUNTRACED to return. 
+	Page 744-745 in textbook.
+	*/
+	while((pid = waitpid(-1, &status, WNOHANG|WUNTRACED)) != 0){ 
 		
-		int jid = pid2jid(pid); //Declaring this inside the loop purely out of spite. Also to get proper jid
+		int jid = pid2jid(pid); //Declaring jid inside loop to get jid of stopped/termed process.
 
 		if(WIFEXITED(status)){
 			deletejob(jobs, pid); //Executes if child terminated normally
