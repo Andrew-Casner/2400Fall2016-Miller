@@ -161,8 +161,8 @@ void eval(char *cmdline)
 	int bg = parseline(cmdline, argv);
 	struct job_t *job;
 	// This initializes the signal set
-	sigset_t mask;
-	sigemptyset(&mask);
+	sigset_t mask; //I
+	sigemptyset(&mask); //Initializes signal set "mask" to contain no signals
 	sigaddset(&mask, SIGCHLD);
 
 	// New process id
@@ -234,14 +234,10 @@ int builtin_cmd(char **argv)
     listjobs(jobs);
     return 1;
   }
-  else if(strcmp(argv[0],"fg") == 0){
+  else if((strcmp(argv[0],"fg") == 0) || (strcmp(argv[0], "bg") == 0)) {
     do_bgfg(argv); //Calls fg/bg handler
     return 1;
-  }
-  else if(strcmp(argv[0],"bg") == 0){
-    do_bgfg(argv); //Calles fg/bg handler
-    return 1;
-  }
+}
   return 0;     /* not a builtin command */
 }
 
@@ -302,8 +298,9 @@ void do_bgfg(char **argv)
 	//set the state to "BG"
 	//print out background process
 	if(cmd == "bg"){
-		jobp->state = BG; //Changes state to background
 		printf("[%d] (%d) %s", jobp->jid, jobp->pid, jobp->cmdline);
+		jobp->state = BG; //Changes state to background
+		
 	}
 
 	return;
@@ -339,25 +336,30 @@ void sigchld_handler(int sig)
 {
 	pid_t pid;
 	//int jid = pid2jid(pid);
-	int status;
+	int status; //
 
 	/*
+	First arg set to -1, because waitpid will then wait for any process to terminate
+
 	" WNOHANG|WUNTRACED - Return immediately with value 0 if none of the child processes in the wait set have terminated.
 	OR wait until process in wait set has terminated or stopped, then return pid of stopped/termed process that caused WUNTRACED to return. 
 	Page 744-745 in textbook.
-	*/
-	while((pid = waitpid(-1, &status, WNOHANG|WUNTRACED)) != 0){ 
+
+	If status (value pointed to by statusp,, then waitpid continues.	*/
+	while((pid = waitpid(-1, &status, WNOHANG|WUNTRACED)) > 0){ 
 		
 		int jid = pid2jid(pid); //Declaring jid inside loop to get jid of stopped/termed process.
-
+		
 		if(WIFEXITED(status)){
-			deletejob(jobs, pid); //Executes if child terminated normally
+			deletejob(jobs, pid); //Executes if child terminated normally with exit()
 		}
-		else if(WIFSIGNALED(status)){ //True if child was terminated by a signal
+	    else if(WIFSIGNALED(status)){
+	        //printf("Debug sigchld term\n"); //True if child was terminated by an unhandled signal.
 			printf("Job [%d] (%d) terminated by signal %d\n",jid, pid, WTERMSIG(status));
 			deletejob(jobs, pid);
 		}
-		else if(WIFSTOPPED(status)){ //True if child was stopped by delivery of a signal. (WUNTRACED)
+		else if(WIFSTOPPED(status)){
+			//printf("Debug sigchld stop"); //True if child was stopped by delivery of a signal. (WUNTRACED)
 			printf("Job [%d] (%d) stopped by signal %d\n",jid, pid, WSTOPSIG(status));
 			getjobpid(jobs, pid)->state = ST;
 		}
@@ -378,19 +380,22 @@ void sigchld_handler(int sig)
 //
 void sigint_handler(int sig)
 {
-	int pid = fgpid(jobs);
+	pid_t pid = fgpid(jobs);
 	int jid = pid2jid(pid);
+	//int jid = pid2jid(pid);
 	if(pid == 0){
 		//There is no foreground Process
 		return;
 	}
 	else{
 		//There is a foreground Process
-	        printf("Job [%d] (%d) terminated by signal %d\n",jid, pid, sig);
+	    //printf("Job [%d] (%d) terminated by signal %d\n",jid, pid, sig);
 		//Reap it
 		kill(-pid, SIGINT);
 		//Remove the job from the joblist
-		deletejob(jobs,pid);
+		//deletejob(jobs,pid);
+		return;
+
 	}
 	return;
 }
@@ -403,19 +408,21 @@ void sigint_handler(int sig)
 //
 void sigtstp_handler(int sig)
 {
-	int pid = fgpid(jobs);
+	pid_t pid = fgpid(jobs);
 	int jid = pid2jid(pid);
+	//int jid = pid2jid(pid);
 	if(pid == 0){
 		//There is no foreground Process
 		return;
 	}
 	else{
 		//There is a foreground Process
-		printf("Job [%d] (%d) stopped by signal %d\n",jid, pid, sig);
+		//printf("Job1 [%d] (%d) stopped by signal %d\n",jid, pid, sig);
 		//Set the state to stopped
-		getjobpid(jobs,pid)->state=ST;
+		//getjobpid(jobs,pid)->state=ST;
 		//Stop it
 		kill(-pid, SIGTSTP);
+		return;
 	}
 	return;
 }
